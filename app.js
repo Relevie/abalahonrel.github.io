@@ -1,37 +1,59 @@
-(function () {
-    [...document.querySelectorAll(".control")].forEach(button => {
-        button.addEventListener("click", function() {
-            document.querySelector(".active-btn").classList.remove("active-btn");
-            this.classList.add("active-btn");
-            document.querySelector(".active").classList.remove("active");
-            document.getElementById(button.dataset.id).classList.add("active");
-        })
-    });
-    document.querySelector(".theme-btn").addEventListener("click", () => {
-        document.body.classList.toggle("light-mode");
-    })
+(() => {
+  const themeToggle = document.querySelector(".theme-toggle");
 
-    const viewButtons = document.querySelectorAll('.view-button');
-    const modalContainer = document.querySelector('.modal-container');
-    const modalImage = document.querySelector('.modal-image');
-    const closeButton = document.querySelector('.close-button');
+  const setTheme = (theme) => {
+    document.body.dataset.theme = theme;
+    themeToggle.setAttribute("aria-pressed", String(theme === "dark"));
+    themeToggle.setAttribute(
+      "aria-label",
+      theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+    );
+  };
 
-    viewButtons.forEach((button) => {
-        button.addEventListener('click', function () {
-            // Get the corresponding image source
-            const imageUrl = this.closest('.portfolio-item').dataset.image;
+  try {
+    const savedTheme = localStorage.getItem("relevie-portfolio-theme");
+    if (savedTheme === "dark" || savedTheme === "light") setTheme(savedTheme);
+  } catch {
+    // The default light theme still works when storage is unavailable.
+  }
 
-            // Set the modal image source
-            modalImage.src = imageUrl;
+  themeToggle.addEventListener("click", () => {
+    const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    try {
+      localStorage.setItem("relevie-portfolio-theme", nextTheme);
+    } catch {
+      // Keep the selected theme for this visit if storage is unavailable.
+    }
+  });
 
-            // Display the modal
-            modalContainer.style.display = 'flex';
+  const year = document.querySelector("#year");
+  if (year) year.textContent = String(new Date().getFullYear());
+
+  if ("IntersectionObserver" in window) {
+    const links = [...document.querySelectorAll('.site-nav a[href^="#"]')];
+    const sections = links
+      .map((link) => document.querySelector(link.getAttribute("href")))
+      .filter(Boolean);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const current = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!current) return;
+
+        links.forEach((link) => {
+          if (link.hash === `#${current.target.id}`) {
+            link.setAttribute("aria-current", "location");
+          } else {
+            link.removeAttribute("aria-current");
+          }
         });
-    });
+      },
+      { rootMargin: "-18% 0px -58% 0px", threshold: [0, 0.15, 0.4] }
+    );
 
-    // Add event listener for the close button in the modal
-    closeButton.addEventListener('click', function () {
-        // Hide the modal
-        modalContainer.style.display = 'none';
-    });
+    sections.forEach((section) => observer.observe(section));
+  }
 })();
